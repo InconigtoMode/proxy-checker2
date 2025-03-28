@@ -1,6 +1,7 @@
+// next.config.mjs
 let userConfig = undefined
 try {
-  userConfig = await import('./v0-user-next.config')
+  userConfig = await import('./v0-user-next.config.mjs').then(mod => mod.default || mod)
 } catch (e) {
   // ignore error
 }
@@ -16,33 +17,45 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Netlify specific settings
+  trailingSlash: true,
+  // Keep only the essential experimental features
   experimental: {
-    webpackBuildWorker: true,
-    parallelServerBuildTraces: true,
-    parallelServerCompiles: true,
+    // These features might cause issues with Netlify
+    // webpackBuildWorker: true,
+    // parallelServerBuildTraces: true,
+    // parallelServerCompiles: true,
   },
+  // This helps with Netlify deployments
+  output: 'standalone',
 }
 
-mergeConfig(nextConfig, userConfig)
+// Properly merge configs and return the result
+const mergedConfig = mergeConfig(nextConfig, userConfig)
 
 function mergeConfig(nextConfig, userConfig) {
   if (!userConfig) {
-    return
+    return nextConfig
   }
+
+  const result = { ...nextConfig }
 
   for (const key in userConfig) {
     if (
-      typeof nextConfig[key] === 'object' &&
-      !Array.isArray(nextConfig[key])
+      typeof result[key] === 'object' &&
+      !Array.isArray(result[key]) &&
+      typeof userConfig[key] === 'object'
     ) {
-      nextConfig[key] = {
-        ...nextConfig[key],
+      result[key] = {
+        ...result[key],
         ...userConfig[key],
       }
     } else {
-      nextConfig[key] = userConfig[key]
+      result[key] = userConfig[key]
     }
   }
+
+  return result
 }
 
-export default nextConfig
+export default mergedConfig
